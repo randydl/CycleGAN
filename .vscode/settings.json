@@ -1,0 +1,6 @@
+{
+    "python.linting.enabled": false,
+    "python.terminal.activateEnvironment": false,
+    "python.pythonPath": "C:\\Apps\\Miniconda3\\envs\\pytorch\\python.exe",
+    "terminal.integrated.env.windows": {"python": "pytorch"}
+}
