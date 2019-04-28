@@ -3,6 +3,9 @@ import torch.nn as nn
 import torch.functional as F
 
 
+__all__ = ['Generator', 'Discriminator']
+
+
 class ResBlock(nn.Module):
     def __init__(self, in_channels):
         super(ResBlock, self).__init__()
@@ -10,16 +13,16 @@ class ResBlock(nn.Module):
         conv_block = [
             nn.ReflectionPad2d(1),
             nn.Conv2d(in_channels, in_channels, kernel_size=3, bias=False), # size / 1
-            nn.InstanceNorm2d(in_channels),
+            nn.BatchNorm2d(in_channels),
             nn.ReLU(True),
             nn.ReflectionPad2d(1),
             nn.Conv2d(in_channels, in_channels, kernel_size=3, bias=False), # size / 1
-            nn.InstanceNorm2d(in_channels)
+            nn.BatchNorm2d(in_channels)
         ]
 
         self.conv_block = nn.Sequential(*conv_block)
 
-    def forward(x):
+    def forward(self, x):
         return x + self.conv_block(x)
 
 
@@ -30,7 +33,7 @@ class Generator(nn.Module):
         model = [
             nn.ReflectionPad2d(3),
             nn.Conv2d(in_channels, ngf, kernel_size=7, bias=False), # size / 1
-            nn.InstanceNorm2d(ngf),
+            nn.BatchNorm2d(ngf),
             nn.ReLU(True)
         ]
 
@@ -39,7 +42,7 @@ class Generator(nn.Module):
             mult = 2 ** i
             model += [
                 nn.Conv2d(ngf * mult, ngf * mult * 2, kernel_size=3, stride=2, padding=1, bias=False), # size / 2
-                nn.InstanceNorm2d(ngf * mult * 2),
+                nn.BatchNorm2d(ngf * mult * 2),
                 nn.ReLU(True)
             ]
 
@@ -51,19 +54,19 @@ class Generator(nn.Module):
             mult = 2 ** (num - i)
             model += [
                 nn.ConvTranspose2d(ngf * mult, ngf * mult // 2, kernel_size=3, stride=2, padding=1, output_padding=1, bias=False), # size * 2
-                nn.InstanceNorm2d(ngf * mult // 2),
+                nn.BatchNorm2d(ngf * mult // 2),
                 nn.ReLU(True)
             ]
 
         model += [
             nn.ReflectionPad2d(3),
             nn.Conv2d(ngf, out_channels, kernel_size=7), # size / 1
-            nn.Tanh()
+            nn.Sigmoid()
         ]
 
         self.model = nn.Sequential(*model)
 
-    def forward(x):
+    def forward(self, x):
         return self.model(x)
 
 
@@ -83,21 +86,21 @@ class Discriminator(nn.Module):
             mult = min(2 ** i, 8)
             model += [
                 nn.Conv2d(ndf * mult_prev, ndf * mult, kernel_size=4, stride=2, padding=1, bias=False), # size / 2
-                nn.InstanceNorm2d(ndf * mult),
+                nn.BatchNorm2d(ndf * mult),
                 nn.LeakyReLU(0.2, True)
             ]
 
         mult_prev = mult
         mult = min(2 ** layers, 8)
         model += [
-            nn.Conv2d(ndf * mult_prev, ndf * mult, kernel_size=4, stride=1, padding=1, bias=False), # size - 1
-            nn.InstanceNorm2d(ndf * mult),
+            nn.Conv2d(ndf * mult_prev, ndf * mult, kernel_size=3, stride=1, padding=1, bias=False), # size / 1
+            nn.BatchNorm2d(ndf * mult),
             nn.LeakyReLU(0.2, True)
         ]
 
-        model += [nn.Conv2d(ndf * mult, 1, kernel_size=4, stride=1, padding=1)] # size - 1
+        model += [nn.Conv2d(ndf * mult, 1, kernel_size=3, stride=1, padding=1)] # size / 1
 
         self.model = nn.Sequential(*model)
 
-    def forward(x):
+    def forward(self, x):
         return self.model(x)
